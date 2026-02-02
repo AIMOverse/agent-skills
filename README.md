@@ -14,6 +14,39 @@ These skills allow AI agents (Claude, GPT, LangChain agents, etc.) to integrate 
 |-------|-------------|
 | [aimo-network](skills/aimo-network/) | Chat completions, streaming, X402 payments, and provider routing via AiMo's unified API |
 
+## Installation
+
+### Any agent (Claude Code, Copilot, Cursor, Codex, etc.)
+
+```bash
+npx skills add AIMOverse/agent-skills
+```
+
+### Claude Code plugin
+
+```bash
+# Register the marketplace
+/plugin marketplace add AIMOverse/agent-skills
+
+# Install the skill
+/plugin install aimo-network@aimoverse-agent-skills
+```
+
+### Manual
+
+Copy the skill folder into your agent's skill directory:
+
+```bash
+# Claude Code
+cp -r skills/aimo-network ~/.claude/skills/
+
+# GitHub Copilot / VS Code
+cp -r skills/aimo-network .github/skills/
+
+# Cursor
+cp -r skills/aimo-network .cursor/skills/
+```
+
 ## Quick start
 
 ### Python

@@ -1,0 +1,14 @@
+{
+  "name": "aimoverse-agent-skills",
+  "owner": {
+    "name": "AIMOverse",
+    "url": "https://aimo.network"
+  },
+  "plugins": [
+    {
+      "name": "aimo-network",
+      "source": "./skills/aimo-network",
+      "description": "Access AiMo Network's decentralized AI marketplace. Chat completions, streaming, X402 permissionless payments, and provider routing via a single OpenAI-compatible API."
+    }
+  ]
+}
