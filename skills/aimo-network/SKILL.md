@@ -51,22 +51,13 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 source "$HOME/.cargo/env"
 ```
 
-### Clone and Build
+### Install the CLI
 
-The CLI lives in the [aimo-node](https://github.com/AIMOverse/aimo-node)
-repository:
-
-```bash
-git clone https://github.com/AIMOverse/aimo-node.git
-cd aimo-node
-cargo build --release --package aimo-cli
-# Binary: target/release/aimo
-```
-
-Optionally, copy it somewhere on your `PATH`:
+Install directly from the [aimo-node](https://github.com/AIMOverse/aimo-node)
+repository via cargo:
 
 ```bash
-cp target/release/aimo ~/.cargo/bin/   # or /usr/local/bin/
+cargo install --git https://github.com/AIMOverse/aimo-node.git aimo-cli
 ```
 
 Verify the installation:
