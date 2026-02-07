@@ -10,8 +10,7 @@ description: >
 license: MIT
 compatibility: >
   Requires internet access, the Rust toolchain (rustc and cargo, install via
-  https://rustup.rs), and the aimo CLI binary built from source
-  (https://github.com/AIMOverse/aimo-node).
+  https://rustup.rs), and the aimo CLI (cargo install aimo-cli).
 metadata:
   author: AIMOverse
   version: "0.1.0"
@@ -53,11 +52,8 @@ source "$HOME/.cargo/env"
 
 ### Install the CLI
 
-Install directly from the [aimo-node](https://github.com/AIMOverse/aimo-node)
-repository via cargo:
-
 ```bash
-cargo install --git https://github.com/AIMOverse/aimo-node.git aimo-cli
+cargo install aimo-cli
 ```
 
 Verify the installation:
