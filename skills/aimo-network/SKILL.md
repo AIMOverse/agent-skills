@@ -8,7 +8,10 @@ description: >
   registration. Covers the full lifecycle from identity creation to live service
   operation via the aimo CLI.
 license: MIT
-compatibility: Requires internet access and the aimo CLI binary (Rust/cargo build).
+compatibility: >
+  Requires internet access, the Rust toolchain (rustc and cargo, install via
+  https://rustup.rs), and the aimo CLI binary built from source
+  (https://github.com/AIMOverse/aimo-node).
 metadata:
   author: AIMOverse
   version: "0.1.0"
@@ -38,9 +41,38 @@ The router exposes protocol-compatible proxy endpoints:
 
 ## Step 1: Install the CLI
 
+### Prerequisites
+
+You need the **Rust toolchain** (rustc and cargo). If you don't have it, install
+via [rustup](https://rustup.rs):
+
 ```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+source "$HOME/.cargo/env"
+```
+
+### Clone and Build
+
+The CLI lives in the [aimo-node](https://github.com/AIMOverse/aimo-node)
+repository:
+
+```bash
+git clone https://github.com/AIMOverse/aimo-node.git
+cd aimo-node
 cargo build --release --package aimo-cli
 # Binary: target/release/aimo
+```
+
+Optionally, copy it somewhere on your `PATH`:
+
+```bash
+cp target/release/aimo ~/.cargo/bin/   # or /usr/local/bin/
+```
+
+Verify the installation:
+
+```bash
+aimo --help
 ```
 
 All commands accept `--router-url` to override the default router (`https://beta.aimo.network`).
