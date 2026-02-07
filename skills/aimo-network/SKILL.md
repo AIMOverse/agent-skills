@@ -10,8 +10,7 @@ description: >
 license: MIT
 compatibility: >
   Requires internet access, the Rust toolchain (rustc and cargo, install via
-  https://rustup.rs), and the aimo CLI binary built from source
-  (https://github.com/AIMOverse/aimo-node).
+  https://rustup.rs), and the aimo CLI (cargo install aimo-cli).
 metadata:
   author: AIMOverse
   version: "0.1.0"
@@ -43,21 +42,41 @@ The router exposes protocol-compatible proxy endpoints:
 
 ### Prerequisites
 
-You need the **Rust toolchain** (rustc and cargo). If you don't have it, install
-via [rustup](https://rustup.rs):
+The CLI is distributed as a Rust crate, so you need **cargo** (the Rust package
+manager). Check whether it is already installed:
+
+```bash
+cargo --version
+```
+
+If cargo is not found, install the Rust toolchain via
+[rustup](https://rustup.rs):
+
+**Linux / macOS:**
 
 ```bash
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 source "$HOME/.cargo/env"
 ```
 
-### Install the CLI
+**Windows (PowerShell):**
 
-Install directly from the [aimo-node](https://github.com/AIMOverse/aimo-node)
-repository via cargo:
+```powershell
+Invoke-WebRequest -Uri https://win.rustup.rs/x86_64 -OutFile rustup-init.exe
+.\rustup-init.exe
+```
+
+After installation, restart your shell (or run `source "$HOME/.cargo/env"` on
+Linux/macOS) so that `cargo` is on your PATH, then confirm:
 
 ```bash
-cargo install --git https://github.com/AIMOverse/aimo-node.git aimo-cli
+cargo --version
+```
+
+### Install the CLI
+
+```bash
+cargo install aimo-cli
 ```
 
 Verify the installation:
