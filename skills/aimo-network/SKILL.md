@@ -42,12 +42,35 @@ The router exposes protocol-compatible proxy endpoints:
 
 ### Prerequisites
 
-You need the **Rust toolchain** (rustc and cargo). If you don't have it, install
-via [rustup](https://rustup.rs):
+The CLI is distributed as a Rust crate, so you need **cargo** (the Rust package
+manager). Check whether it is already installed:
+
+```bash
+cargo --version
+```
+
+If cargo is not found, install the Rust toolchain via
+[rustup](https://rustup.rs):
+
+**Linux / macOS:**
 
 ```bash
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 source "$HOME/.cargo/env"
+```
+
+**Windows (PowerShell):**
+
+```powershell
+Invoke-WebRequest -Uri https://win.rustup.rs/x86_64 -OutFile rustup-init.exe
+.\rustup-init.exe
+```
+
+After installation, restart your shell (or run `source "$HOME/.cargo/env"` on
+Linux/macOS) so that `cargo` is on your PATH, then confirm:
+
+```bash
+cargo --version
 ```
 
 ### Install the CLI
