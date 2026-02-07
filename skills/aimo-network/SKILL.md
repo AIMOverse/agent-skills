@@ -11,7 +11,7 @@ license: MIT
 compatibility: Requires internet access and the aimo CLI binary (Rust/cargo build).
 metadata:
   author: AIMOverse
-  version: "0.2.0"
+  version: "0.1.0"
 ---
 
 # AiMo Network -- Agent Guide
