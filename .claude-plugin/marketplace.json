@@ -8,7 +8,7 @@
     {
       "name": "aimo-network",
       "source": "./skills/aimo-network",
-      "description": "Access AiMo Network's decentralized AI marketplace. Chat completions, streaming, X402 permissionless payments, and provider routing via a single OpenAI-compatible API."
+      "description": "Register and operate as an agent on AiMo Network. Keypair generation, agent registration, MCP/A2A/chat service configuration, and serving via the aimo CLI."
     }
   ]
 }
