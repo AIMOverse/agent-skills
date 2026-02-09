@@ -1,41 +1,81 @@
 #!/usr/bin/env bash
 # AiMo Network -- Using Services as a Client
 #
-# Examples of consuming chat, MCP, and A2A services through the AiMo router.
+# Examples of consuming chat models, MCP, and A2A services through the AiMo router.
+# Demonstrates the chat model reverse proxy and service discovery.
 #
 # Prerequisites:
-#   - aimo CLI binary on PATH
+#   - aimo CLI (auto-installs if not found)
 #   - A keypair at ~/.config/aimo/keypair.json (run: aimo keygen)
 #   - Sufficient session balance or X402 payment capability
 #
 # Usage:
 #   chmod +x use_services.sh
-#   ./use_services.sh
+#   ./use_services.sh [agent_id]
 
 set -euo pipefail
 
 KEYPAIR="${AIMO_KEYPAIR:-$HOME/.config/aimo/keypair.json}"
 ROUTER_URL="${AIMO_ROUTER_URL:-https://beta.aimo.network}"
 
+# ── Step 0: Install CLI (if not already installed) ───────────────────────────
+
+if ! command -v aimo &> /dev/null; then
+    echo "==> AiMo CLI not found, installing..."
+    curl -fsSL https://aimo-cli-releases.s3.ap-northeast-1.amazonaws.com/install.sh | sh
+    export PATH="$HOME/.aimo/bin:$PATH"
+fi
+
 # ── Service Discovery ────────────────────────────────────────────────────────
 
 echo "==> Listing available models:"
-aimo router list-models --json --router-url "$ROUTER_URL" | jq '.[].id'
+aimo router list-models --json --router-url "$ROUTER_URL" | jq -r '.[].id' | head -10
+
+echo ""
+echo "==> Searching for GPT models:"
+aimo router search-models "gpt" --json --router-url "$ROUTER_URL" | jq -r '.data[].id'
 
 echo ""
 echo "==> Listing available tools:"
-aimo router list-tools --json --router-url "$ROUTER_URL" | jq '.[].name'
+aimo router list-tools --json --router-url "$ROUTER_URL" | jq -r '.[].name' | head -5
 
 echo ""
 echo "==> Listing registered agents:"
-aimo router list-agents --json --router-url "$ROUTER_URL" | jq '.[].agent_id'
+aimo router list-agents --json --router-url "$ROUTER_URL" | jq -r '.[].agent_id' | head -5
 
-# ── Chat Completions ─────────────────────────────────────────────────────────
+# ── Chat Model Reverse Proxy ─────────────────────────────────────────────────
+
+echo ""
+echo "==> Using chat model reverse proxy with DeepSeek:"
+aimo chat \
+    --model deepseek/deepseek-v3.2 \
+    --message "Explain the AiMo Network in one sentence" \
+    --keypair "$KEYPAIR" \
+    --router-url "$ROUTER_URL"
+
+echo ""
+echo "==> Using chat model reverse proxy with Claude:"
+aimo chat \
+    --model anthropic/claude-opus-4.6 \
+    --message "What are the benefits of decentralized AI infrastructure?" \
+    --keypair "$KEYPAIR" \
+    --router-url "$ROUTER_URL"
+
+echo ""
+echo "==> Chat with system prompt:"
+aimo chat \
+    --model deepseek/deepseek-v3.2 \
+    --system "You are a helpful coding assistant. Keep explanations concise." \
+    --message "Explain quicksort in one paragraph" \
+    --keypair "$KEYPAIR" \
+    --router-url "$ROUTER_URL"
+
+# ── Chat Completions (legacy example) ────────────────────────────────────────
 
 echo ""
 echo "==> Sending a chat completion:"
 aimo chat \
-    --model gpt-4 \
+    --model deepseek/deepseek-v3.2 \
     --message "Explain quicksort in one paragraph" \
     --keypair "$KEYPAIR" \
     --router-url "$ROUTER_URL"

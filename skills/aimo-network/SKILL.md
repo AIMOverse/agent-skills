@@ -1,16 +1,8 @@
 ---
 name: aimo-network
-description: >
-  Register and operate as an agent on the AiMo Network -- a decentralized
-  routing network for AI services. Use when you need to generate a wallet
-  keypair, register yourself as an agent on the network, configure MCP/A2A/chat
-  services, start serving requests through the router, and verify your
-  registration. Covers the full lifecycle from identity creation to live service
-  operation via the aimo CLI.
+description: Register and operate as an agent on the AiMo Network -- a decentralized routing network for AI services. Use when you need to generate a wallet keypair, register yourself as an agent on the network, configure MCP/A2A/chat services, start serving requests through the router, use chat model reverse proxy, and verify your registration. Covers the full lifecycle from identity creation to live service operation via the aimo CLI.
 license: MIT
-compatibility: >
-  Requires internet access, the Rust toolchain (rustc and cargo, install via
-  https://rustup.rs), and the aimo CLI (cargo install aimo-cli).
+compatibility: Requires internet access and the aimo CLI. The CLI is distributed as a pre-built binary with automatic installation via curl (no build tools required).
 metadata:
   author: AIMOverse
   version: "0.1.0"
@@ -40,49 +32,28 @@ The router exposes protocol-compatible proxy endpoints:
 
 ## Step 1: Install the CLI
 
-### Prerequisites
-
-The CLI is distributed as a Rust crate, so you need **cargo** (the Rust package
-manager). Check whether it is already installed:
-
-```bash
-cargo --version
-```
-
-If cargo is not found, install the Rust toolchain via
-[rustup](https://rustup.rs):
+The AiMo CLI is distributed as a pre-built binary with automatic installation:
 
 **Linux / macOS:**
 
 ```bash
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-source "$HOME/.cargo/env"
+curl -fsSL https://aimo-cli-releases.s3.ap-northeast-1.amazonaws.com/install.sh | sh
 ```
 
-**Windows (PowerShell):**
+The installer downloads the appropriate binary for your platform and adds it to your PATH.
 
-```powershell
-Invoke-WebRequest -Uri https://win.rustup.rs/x86_64 -OutFile rustup-init.exe
-.\rustup-init.exe
-```
-
-After installation, restart your shell (or run `source "$HOME/.cargo/env"` on
-Linux/macOS) so that `cargo` is on your PATH, then confirm:
-
-```bash
-cargo --version
-```
-
-### Install the CLI
-
-```bash
-cargo install aimo-cli
-```
-
-Verify the installation:
+**Verify the installation:**
 
 ```bash
 aimo --help
+```
+
+**Manual installation (if needed):**
+
+If you prefer to build from source:
+
+```bash
+cargo install aimo-cli
 ```
 
 All commands accept `--router-url` to override the default router (`https://beta.aimo.network`).
@@ -279,23 +250,135 @@ aimo router analytics
 
 ---
 
+## Using the Chat Model Reverse Proxy
+
+The AiMo Network router acts as a reverse proxy for chat models, providing a unified OpenAI-compatible interface to hundreds of AI models from different providers. This allows you to:
+
+- Access multiple model providers through a single endpoint
+- Switch between models without changing your code
+- Benefit from automatic provider routing and failover
+- Use familiar OpenAI SDK libraries
+
+### Quick Start: Chat with Any Model
+
+```bash
+# Interactive chat (multi-turn conversation)
+aimo chat --model deepseek/deepseek-v3.2 --keypair ~/.config/aimo/keypair.json
+
+# Single query
+aimo chat --model deepseek/deepseek-v3.2 --message "Explain quantum computing" --keypair ~/.config/aimo/keypair.json
+
+# With system prompt
+aimo chat --model anthropic/claude-opus-4.6 --system "You are a helpful coding assistant" --message "Write a quicksort in Python"
+```
+
+### Available Models
+
+List all available models from connected providers:
+
+```bash
+# List all models
+aimo router list-models
+
+# JSON output for programmatic use
+aimo router list-models --json
+
+# Search for specific models
+aimo router search-models "gpt"
+aimo router search-models "claude" --json
+aimo router search-models "deepseek" --limit 10
+```
+
+### Model Selection
+
+Models are specified by provider and model name:
+
+```bash
+# OpenAI models
+aimo chat --model openai/gpt-5 --message "Hello"
+aimo chat --model openai/gpt-5 --message "Quick task"
+
+# Anthropic models  
+aimo chat --model anthropic/claude-opus-4.6 --message "Complex reasoning"
+
+# Google models
+aimo chat --model google/gemini-2.0-flash-exp --message "Analysis task"
+
+# DeepSeek models
+aimo chat --model deepseek/deepseek-v3.2 --message "Cost-effective task"
+```
+
+### Direct API Usage
+
+You can also use the HTTP endpoint directly with any OpenAI-compatible client:
+
+```bash
+# cURL example
+curl -X POST "https://beta.aimo.network/api/v1/chat/completions" \
+  -H "Sign-In-With-X: <base64-siwx-signature>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "deepseek/deepseek-v3.2",
+    "messages": [{"role": "user", "content": "Hello!"}],
+    "max_tokens": 150
+  }'
+```
+
+### Integration with Existing Tools
+
+The reverse proxy is OpenAI-compatible, so you can use it with any OpenAI SDK:
+
+**Python:**
+```python
+import openai
+
+# Configure to use AiMo Network
+client = openai.OpenAI(
+    base_url="https://beta.aimo.network/api/v1",
+    api_key="not-used",  # Use SIWx authentication instead
+    default_headers={"Sign-In-With-X": "<siwx-signature>"}
+)
+
+response = client.chat.completions.create(
+    model="deepseek/deepseek-v3.2",
+    messages=[{"role": "user", "content": "Hello!"}]
+)
+```
+
+**TypeScript SDK:**
+```bash
+npm install @aimo.network/client @aimo.network/svm
+```
+
+See the [SDK Reference](https://docs.aimo.network/docs/sdk-reference) for TypeScript integration.
+
+### Benefits of the Reverse Proxy
+
+1. **Unified Interface:** One API for hundreds of models
+2. **Automatic Routing:** Router selects best provider based on price, latency, uptime
+3. **Transparent Pricing:** Pay per token based on actual usage
+4. **No Vendor Lock-in:** Switch models without code changes
+5. **Built-in Failover:** Automatic fallback if primary provider fails
+
+---
+
 ## Using Services as a Client
 
 ### Chat Completions (OpenAI-compatible)
 
 ```bash
 # Interactive multi-turn chat
-aimo chat --model gpt-4 --keypair ~/.config/aimo/keypair.json
+aimo chat --model deepseek/deepseek-v3.2 --keypair ~/.config/aimo/keypair.json
 
 # Single message
 aimo chat \
-  --model gpt-4 \
+  --model deepseek/deepseek-v3.2 \
   --message "Explain quicksort in one paragraph" \
   --keypair ~/.config/aimo/keypair.json
 
 # With a system prompt
 aimo chat \
-  --model gpt-4 \
+  --model deepseek/deepseek-v3.2 \
   --message "What causes tides?" \
   --system "You are a physics teacher. Keep answers under 100 words." \
   --keypair ~/.config/aimo/keypair.json
@@ -304,6 +387,22 @@ aimo chat \
 The `/api/v1/chat/completions` endpoint is a drop-in OpenAI replacement. Any
 OpenAI SDK or tool works by pointing the base URL to
 `https://beta.aimo.network/api/v1` and authenticating with SIWx.
+
+### Search and Discovery
+
+```bash
+# Search for models
+aimo router search-models "gpt"
+aimo router search-models "deepseek" --limit 5 --json
+
+# Search for MCP tools
+aimo router search-mcp "calculator"
+aimo router search-mcp "weather" --limit 10 --json
+
+# Search for A2A agents
+aimo router search-a2a "summarize"
+aimo router search-a2a "code review" --limit 5 --json
+```
 
 ### MCP (Model Context Protocol)
 

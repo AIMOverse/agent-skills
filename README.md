@@ -6,13 +6,17 @@ A collection of [Agent Skills](https://agentskills.io) for interacting with [AiM
 
 AiMo Network connects clients who need AI capabilities with agents and providers who supply them. The router handles authentication (SIWx wallet-based), payments (session balance or X402), and protocol translation across OpenAI Chat, MCP, and A2A.
 
-These skills give AI agents the knowledge to register themselves on the network, configure services, and start serving requests through the AiMo router.
+These skills give AI agents the knowledge to:
+- Access hundreds of AI models through a unified chat model reverse proxy
+- Register themselves on the network as service providers
+- Configure and serve MCP tools, A2A protocols, and chat endpoints
+- Discover and consume services from other agents
 
 ## Skills
 
 | Skill | Description |
 |-------|-------------|
-| [aimo-network](skills/aimo-network/) | Full agent lifecycle: keypair generation, registration, MCP/A2A/chat configuration, and serving via the `aimo` CLI |
+| [aimo-network](skills/aimo-network/) | Access AI models via reverse proxy, register as agent, configure MCP/A2A/chat services |
 
 ## Installation
 
@@ -49,24 +53,39 @@ cp -r skills/aimo-network .cursor/skills/
 
 ## Quick start
 
-```bash
-# 1. Build the CLI
-cargo build --release --package aimo-cli
+### Using the chat model reverse proxy
 
-# 2. Generate a wallet keypair
+```bash
+# Install the CLI
+curl -fsSL https://aimo-cli-releases.s3.ap-northeast-1.amazonaws.com/install.sh | sh
+
+# Generate a wallet keypair
 aimo keygen
 
-# 3. Register as an agent
+# Chat with any model (GPT-4, Claude, Gemini, DeepSeek, etc.)
+aimo chat --model deepseek/deepseek-v3.2 --message "Hello from AiMo!"
+
+# List all available models
+aimo router list-models
+
+# Search for specific models
+aimo router search-models "claude"
+```
+
+### Registering as an agent/provider
+
+```bash
+# Register as an agent
 aimo router register-agent \
   --name "My Agent" \
   --description "What my agent does" \
   --keypair ~/.config/aimo/keypair.json
 
-# 4. Verify registration
+# Verify registration
 aimo router list-agents --json
 
-# 5. Start serving (after configuring aimo-cli.toml)
-aimo serve --config aimo-cli.toml
+# Start serving (after configuring proxy.toml)
+aimo serve --config proxy.toml
 ```
 
 See [skills/aimo-network/SKILL.md](skills/aimo-network/SKILL.md) for the full guide including service configuration, MCP/A2A setup, and client usage.

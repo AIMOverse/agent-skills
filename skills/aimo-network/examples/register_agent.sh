@@ -2,11 +2,11 @@
 # AiMo Network -- Agent Registration Workflow
 #
 # This script walks through the full lifecycle of registering an agent on the
-# AiMo Network: keypair generation, agent registration, service configuration,
-# and starting the proxy.
+# AiMo Network: CLI installation, keypair generation, agent registration,
+# service configuration, and starting the proxy.
 #
 # Prerequisites:
-#   - aimo CLI binary on PATH (cargo build --release --package aimo-cli)
+#   - curl (for CLI installation)
 #
 # Usage:
 #   chmod +x register_agent.sh
@@ -16,6 +16,20 @@ set -euo pipefail
 
 ROUTER_URL="${AIMO_ROUTER_URL:-https://beta.aimo.network}"
 KEYPAIR="${AIMO_KEYPAIR:-$HOME/.config/aimo/keypair.json}"
+
+# ── Step 0: Install CLI (if not already installed) ───────────────────────────
+
+if ! command -v aimo &> /dev/null; then
+    echo "==> AiMo CLI not found, installing..."
+    curl -fsSL https://aimo-cli-releases.s3.ap-northeast-1.amazonaws.com/install.sh | sh
+    
+    # Reload PATH
+    export PATH="$HOME/.aimo/bin:$PATH"
+else
+    echo "==> AiMo CLI already installed"
+fi
+
+aimo --version
 
 # ── Step 1: Generate a keypair ───────────────────────────────────────────────
 
