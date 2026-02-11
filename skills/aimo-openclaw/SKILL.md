@@ -46,30 +46,80 @@ aimo keygen
 
 ## 3. Start the local reverse proxy
 
+### Pick an available port
+
+The default port is `8080`. Before starting the proxy, check whether it is
+already in use:
+
+```bash
+lsof -ti:8080 >/dev/null 2>&1 && echo "Port 8080 is busy" || echo "Port 8080 is free"
+```
+
+If the port is busy, choose another one (e.g. `8081`). Use the chosen port in
+every command and config value below. For the rest of this guide we use the shell
+variable `$PORT` — set it once:
+
+```bash
+PORT=8080   # change if 8080 is busy
+```
+
+### Start the proxy
+
 Run:
 
 ```bash
-aimo chat --serve
+aimo chat --serve --port $PORT
 ```
 
-This starts an OpenAI-compatible proxy at `http://127.0.0.1:8080/v1`. It must
+This starts an OpenAI-compatible proxy at `http://127.0.0.1:$PORT/v1`. It must
 stay running while OpenClaw uses it. Start it in the background or in a separate
 terminal/tmux session.
 
-To use a different port:
+### Auto-restart on crash
+
+The proxy can crash. Wrap it so it restarts automatically:
 
 ```bash
-aimo chat --serve --port <port>
+while true; do
+  aimo chat --serve --port $PORT
+  echo "Proxy exited, restarting in 2 seconds..."
+  sleep 2
+done
 ```
 
-Verify it is running:
+Or, if OpenClaw supports hook entries, register the proxy as a managed process:
+
+```json
+{
+  "hooks": {
+    "internal": {
+      "entries": {
+        "aimo-proxy": {
+          "enabled": true,
+          "command": "aimo chat --serve --port 8080",
+          "restart": "always"
+        }
+      }
+    }
+  }
+}
+```
+
+### Wait for the proxy to be ready
+
+Before moving on, confirm the proxy is serving requests:
 
 ```bash
-curl -s http://127.0.0.1:8080/v1/models
+until curl -s http://127.0.0.1:$PORT/v1/models > /dev/null; do
+  echo "Waiting for proxy..."
+  sleep 1
+done
+echo "Proxy ready!"
 ```
 
-This should return a JSON array of available models. If it does not, the proxy is
-not running. Go back and start it.
+This should return a JSON array of available models once the proxy is up. If it
+never succeeds, check the proxy logs and ensure `aimo chat --serve` started
+without errors.
 
 ## 4. Configure OpenClaw to use the proxy
 
@@ -92,6 +142,8 @@ unrelated settings):
   }
 }
 ```
+
+Replace `8080` with the port you chose in step 3 if it differs.
 
 Field explanation:
 
@@ -164,6 +216,28 @@ Merge into the same `openclaw.json`:
 
 The format is `aimo/<model-id>`, where `aimo` matches the provider key above.
 
+### Optional: use a minimal tool profile (workaround for tool-call issues)
+
+Some models routed through AiMo may not handle complex tool-call schemas
+reliably. Until this is resolved upstream, you can reduce tool complexity by
+setting a minimal tool profile for the default agent:
+
+```json
+{
+  "agents": {
+    "defaults": {
+      "tools": {
+        "profile": "minimal"
+      }
+    }
+  }
+}
+```
+
+Merge this into `~/.openclaw/openclaw.json` alongside the other settings. This
+limits the tools exposed to the model, avoiding malformed tool-call responses.
+Remove this setting once AiMo's tool-call support stabilises.
+
 ## 5. Verify the configuration
 
 After editing the config, restart OpenClaw to load the changes.
@@ -178,7 +252,7 @@ prefix (e.g. `aimo/deepseek/deepseek-v3.2`) and sending a test message.
 | Symptom                                | Action                                                                                      |
 |----------------------------------------|---------------------------------------------------------------------------------------------|
 | `"No API provider registered"`         | Ensure `"api": "openai-completions"` is present in the provider config.                     |
-| Connection refused                     | Run `curl http://127.0.0.1:8080/v1/models` to check the proxy. Restart `aimo chat --serve`. |
+| Connection refused                     | Run `curl http://127.0.0.1:<port>/v1/models` to check the proxy. Restart `aimo chat --serve --port <port>`. |
 | Model not found                        | Run `aimo router list-models` and use the exact model ID in the config.                     |
 | Authentication error from aimo proxy   | Run `aimo keygen` to create a keypair, or pass `--keypair <path>` to `aimo chat --serve`.   |
 | Config changes not taking effect       | Restart OpenClaw after editing `~/.openclaw/openclaw.json`.                                 |
