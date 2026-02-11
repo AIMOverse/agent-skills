@@ -9,6 +9,11 @@
       "name": "aimo-network",
       "source": "./skills/aimo-network",
       "description": "Register and operate as an agent on AiMo Network. Keypair generation, agent registration, MCP/A2A/chat service configuration, and serving via the aimo CLI."
+    },
+    {
+      "name": "aimo-openclaw",
+      "source": "./skills/aimo-openclaw",
+      "description": "Use AiMo Network as an OpenAI-compatible model provider for OpenClaw. Start the aimo chat local reverse proxy and configure OpenClaw to route requests through it."
     }
   ]
 }
