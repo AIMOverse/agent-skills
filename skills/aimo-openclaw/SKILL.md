@@ -1,81 +1,82 @@
 ---
 name: aimo-openclaw
-description: Use AiMo Network as an OpenAI-compatible model provider for OpenClaw. Start the aimo chat local reverse proxy and configure OpenClaw to route requests through it, giving OpenClaw access to hundreds of AI models via a single local endpoint.
+description: Switch OpenClaw to use AiMo Network for LLM inference. Teaches the agent how to start the aimo chat reverse proxy and reconfigure its own OpenClaw instance to route all model requests through AiMo Network.
 license: MIT
-compatibility: Requires the aimo CLI (with a valid keypair) and an OpenClaw instance. The aimo CLI is distributed as a pre-built binary with automatic installation via curl.
+compatibility: Requires the aimo CLI (with a valid keypair) and a running OpenClaw instance. The aimo CLI is distributed as a pre-built binary with automatic installation via curl.
 metadata:
   author: AIMOverse
   version: "0.1.0"
 ---
 
-# Using AiMo Network as a Model Provider for OpenClaw
+# Switch OpenClaw to AiMo Network for LLM Inference
 
-This guide explains how to connect [OpenClaw](https://github.com/openclaw/openclaw)
-to the AiMo Network so that OpenClaw can use any model available on the network
-(DeepSeek, Anthropic, OpenAI, Google, and more) through a single local endpoint.
-
-The setup has two parts:
-
-1. Start the **aimo chat reverse proxy** locally.
-2. Point **OpenClaw** at the local proxy as a custom OpenAI-compatible provider.
+You are an OpenClaw agent. Follow these instructions to switch your LLM backend
+to AiMo Network, giving you access to hundreds of models (DeepSeek, Anthropic,
+OpenAI, Google, and more) through a single local proxy.
 
 ---
 
-## Prerequisites
+## 1. Install the aimo CLI (if not already installed)
 
-- **aimo CLI** installed and a keypair generated (see the `aimo-network` skill).
-- A running **OpenClaw** instance.
+Check whether the CLI is available:
 
-If you have not installed the CLI yet:
+```bash
+aimo --version
+```
+
+If the command is not found, install it:
 
 ```bash
 curl -fsSL https://aimo-cli-releases.s3.ap-northeast-1.amazonaws.com/install.sh | sh
+```
+
+## 2. Generate a keypair (if none exists)
+
+Check for an existing keypair:
+
+```bash
+ls ~/.config/aimo/keypair.json
+```
+
+If the file does not exist, generate one:
+
+```bash
 aimo keygen
 ```
 
----
+## 3. Start the local reverse proxy
 
-## Step 1: Start the AiMo Chat Reverse Proxy
-
-Run the following command to start a local OpenAI-compatible proxy server:
+Run:
 
 ```bash
 aimo chat --serve
 ```
 
-This launches a local HTTP server that proxies requests to the AiMo Network
-router. By default the server listens on `http://127.0.0.1:8080` and exposes an
-OpenAI-compatible `/v1/chat/completions` endpoint.
+This starts an OpenAI-compatible proxy at `http://127.0.0.1:8080/v1`. It must
+stay running while OpenClaw uses it. Start it in the background or in a separate
+terminal/tmux session.
 
-You can specify a custom port or keypair:
-
-```bash
-aimo chat --serve --port 9090 --keypair ~/.config/aimo/keypair.json
-```
-
-Keep this process running in the background (or in a separate terminal / tmux
-session) while OpenClaw is active.
-
-### Verify the proxy is running
+To use a different port:
 
 ```bash
-curl http://127.0.0.1:8080/v1/models
+aimo chat --serve --port <port>
 ```
 
-You should see a JSON list of available models from the AiMo Network.
+Verify it is running:
 
----
+```bash
+curl -s http://127.0.0.1:8080/v1/models
+```
 
-## Step 2: Configure OpenClaw to Use the Local Proxy
+This should return a JSON array of available models. If it does not, the proxy is
+not running. Go back and start it.
 
-Open your OpenClaw configuration file (usually `~/.openclaw/openclaw.json`) and
-add an `aimo` provider under `models.providers`.
+## 4. Configure OpenClaw to use the proxy
 
-Reference: [OpenClaw Model Providers documentation](https://docs.openclaw.ai/concepts/model-providers#providers-via-models-providers-custom%2Fbase-url)
+The OpenClaw config file is at `~/.openclaw/openclaw.json`.
 
-### Minimal configuration
-
-Add the following to your `openclaw.json`:
+Read the current config, then **merge** the following into it (do not overwrite
+unrelated settings):
 
 ```json
 {
@@ -92,16 +93,19 @@ Add the following to your `openclaw.json`:
 }
 ```
 
-- **`baseUrl`** -- points to the local proxy started in Step 1. Change the port
-  if you used a custom `--port` flag.
-- **`apiKey`** -- can be any non-empty string; authentication is handled by the
-  aimo proxy via SIWx signatures, not by an API key.
-- **`api`** -- must be `"openai-completions"` so OpenClaw uses the correct
-  request format.
+Field explanation:
 
-### Configuration with explicit model definitions
+| Field     | Value                              | Why                                                                 |
+|-----------|------------------------------------|---------------------------------------------------------------------|
+| `baseUrl` | `http://127.0.0.1:<port>/v1`      | Points to the local proxy from step 3. Match the port you used.     |
+| `apiKey`  | Any non-empty string               | Auth is handled by the proxy via SIWx signatures, not by API key.   |
+| `api`     | `"openai-completions"`             | Required. Tells OpenClaw to use the OpenAI completions format.      |
 
-If you want to define specific models and their metadata:
+Reference: [OpenClaw Model Providers — Custom Base URL](https://docs.openclaw.ai/concepts/model-providers#providers-via-models-providers-custom%2Fbase-url)
+
+### Optional: define explicit models
+
+If you want to pin specific models with metadata, add a `models` array:
 
 ```json
 {
@@ -136,9 +140,15 @@ If you want to define specific models and their metadata:
 }
 ```
 
-### Set the active model
+To discover available model IDs, run:
 
-To make an AiMo model the default in OpenClaw, add it to `agents.defaults`:
+```bash
+aimo router list-models --json
+```
+
+### Optional: set an AiMo model as the default
+
+Merge into the same `openclaw.json`:
 
 ```json
 {
@@ -152,47 +162,23 @@ To make an AiMo model the default in OpenClaw, add it to `agents.defaults`:
 }
 ```
 
-The format is `<provider-name>/<model-id>`, where provider name matches the key
-you used in `models.providers` (in this case `aimo`).
+The format is `aimo/<model-id>`, where `aimo` matches the provider key above.
 
----
+## 5. Verify the configuration
 
-## Putting It All Together
+After editing the config, restart OpenClaw to load the changes.
 
-1. **Start the proxy** (keep it running):
-
-   ```bash
-   aimo chat --serve
-   ```
-
-2. **Edit `~/.openclaw/openclaw.json`** to add the `aimo` provider (see above).
-
-3. **Restart OpenClaw** to pick up the new configuration.
-
-4. **Select the model** in OpenClaw using the format `aimo/<model-id>`, for
-   example `aimo/deepseek/deepseek-v3.2`.
-
----
-
-## Discover Available Models
-
-To see which models you can use through the proxy:
-
-```bash
-# Via the aimo CLI
-aimo router list-models
-
-# Via the local proxy endpoint
-curl http://127.0.0.1:8080/v1/models
-```
+Then confirm the provider is registered by selecting a model with the `aimo/`
+prefix (e.g. `aimo/deepseek/deepseek-v3.2`) and sending a test message.
 
 ---
 
 ## Troubleshooting
 
-| Symptom | Fix |
-|---------|-----|
-| OpenClaw says "No API provider registered" | Ensure `"api": "openai-completions"` is set in the provider config. |
-| Connection refused | Verify `aimo chat --serve` is still running and the port matches `baseUrl`. |
-| Model not found | Run `aimo router list-models` to check the exact model ID, then use it in the config. |
-| Authentication error from aimo | Run `aimo keygen` if you haven't generated a keypair, or check your `--keypair` path. |
+| Symptom                                | Action                                                                                      |
+|----------------------------------------|---------------------------------------------------------------------------------------------|
+| `"No API provider registered"`         | Ensure `"api": "openai-completions"` is present in the provider config.                     |
+| Connection refused                     | Run `curl http://127.0.0.1:8080/v1/models` to check the proxy. Restart `aimo chat --serve`. |
+| Model not found                        | Run `aimo router list-models` and use the exact model ID in the config.                     |
+| Authentication error from aimo proxy   | Run `aimo keygen` to create a keypair, or pass `--keypair <path>` to `aimo chat --serve`.   |
+| Config changes not taking effect       | Restart OpenClaw after editing `~/.openclaw/openclaw.json`.                                 |
