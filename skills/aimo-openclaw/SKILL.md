@@ -5,7 +5,7 @@ license: MIT
 compatibility: Requires the aimo CLI (with a valid keypair) and a running OpenClaw instance. The aimo CLI is distributed as a pre-built binary with automatic installation via curl.
 metadata:
   author: AIMOverse
-  version: "0.1.0"
+  version: "0.2.0"
 ---
 
 # Switch OpenClaw to AiMo Network for LLM Inference
@@ -44,7 +44,25 @@ If the file does not exist, generate one:
 aimo keygen
 ```
 
-## 3. Start the local reverse proxy
+## 3. Ensure wallet has funds (required for paid models)
+
+The `--auto-pay` flag (step 4) signs a Solana payment for every request that
+requires it. Your keypair's wallet must hold:
+
+- **USDC** (SPL token) — to pay for model inference.
+- **SOL** — to cover Solana transaction fees (a few lamports per request).
+
+Check your balance:
+
+```bash
+aimo router get-balance
+```
+
+If the balance is zero, fund the wallet address shown in
+`~/.config/aimo/keypair.json` by transferring USDC and a small amount of SOL to
+it from any Solana wallet or exchange.
+
+## 4. Start the local reverse proxy
 
 ### Pick an available port
 
@@ -68,8 +86,23 @@ PORT=8080   # change if 8080 is busy
 Run:
 
 ```bash
-aimo chat --serve --port $PORT
+aimo chat --serve --port $PORT --auto-pay
 ```
+
+The `--auto-pay` flag makes the proxy automatically handle paid models. When the
+AiMo router returns HTTP 402 (Payment Required), the proxy intercepts the
+response, signs a Solana USDC payment using your local keypair, and retries the
+request — all transparently to the client.
+
+To limit per-request spend, add a cap:
+
+```bash
+aimo chat --serve --port $PORT --auto-pay --max-spend 0.10
+```
+
+`--max-spend` sets the maximum USDC the proxy will pay for a single request. If
+a request would cost more, the proxy rejects it with a clear error instead of
+signing the payment.
 
 This starts an OpenAI-compatible proxy at `http://127.0.0.1:$PORT/v1`. It must
 stay running while OpenClaw uses it. Start it in the background or in a separate
@@ -81,7 +114,7 @@ The proxy can crash. Wrap it so it restarts automatically:
 
 ```bash
 while true; do
-  aimo chat --serve --port $PORT
+  aimo chat --serve --port $PORT --auto-pay
   echo "Proxy exited, restarting in 2 seconds..."
   sleep 2
 done
@@ -96,7 +129,7 @@ Or, if OpenClaw supports hook entries, register the proxy as a managed process:
       "entries": {
         "aimo-proxy": {
           "enabled": true,
-          "command": "aimo chat --serve --port 8080",
+          "command": "aimo chat --serve --port 8080 --auto-pay",
           "restart": "always"
         }
       }
@@ -121,7 +154,7 @@ This should return a JSON array of available models once the proxy is up. If it
 never succeeds, check the proxy logs and ensure `aimo chat --serve` started
 without errors.
 
-## 4. Configure OpenClaw to use the proxy
+## 5. Configure OpenClaw to use the proxy
 
 The OpenClaw config file is at `~/.openclaw/openclaw.json`.
 
@@ -143,13 +176,13 @@ unrelated settings):
 }
 ```
 
-Replace `8080` with the port you chose in step 3 if it differs.
+Replace `8080` with the port you chose in step 4 if it differs.
 
 Field explanation:
 
 | Field     | Value                              | Why                                                                 |
 |-----------|------------------------------------|---------------------------------------------------------------------|
-| `baseUrl` | `http://127.0.0.1:<port>/v1`      | Points to the local proxy from step 3. Match the port you used.     |
+| `baseUrl` | `http://127.0.0.1:<port>/v1`      | Points to the local proxy from step 4. Match the port you used.     |
 | `apiKey`  | Any non-empty string               | Auth is handled by the proxy via SIWx signatures, not by API key.   |
 | `api`     | `"openai-completions"`             | Required. Tells OpenClaw to use the OpenAI completions format.      |
 
@@ -238,7 +271,7 @@ Merge this into `~/.openclaw/openclaw.json` alongside the other settings. This
 limits the tools exposed to the model, avoiding malformed tool-call responses.
 Remove this setting once AiMo's tool-call support stabilises.
 
-## 5. Verify the configuration
+## 6. Verify the configuration
 
 After editing the config, restart OpenClaw to load the changes.
 
@@ -253,6 +286,10 @@ prefix (e.g. `aimo/deepseek/deepseek-v3.2`) and sending a test message.
 |----------------------------------------|---------------------------------------------------------------------------------------------|
 | `"No API provider registered"`         | Ensure `"api": "openai-completions"` is present in the provider config.                     |
 | Connection refused                     | Run `curl http://127.0.0.1:<port>/v1/models` to check the proxy. Restart `aimo chat --serve --port <port>`. |
+| HTTP 402 / Payment Required            | The proxy was started without `--auto-pay`. Restart with `aimo chat --serve --port <port> --auto-pay`. |
+| `"Insufficient USDC balance"`          | Fund your wallet with USDC. Run `aimo router get-balance` to check, then transfer USDC to the address in `~/.config/aimo/keypair.json`. |
+| `"Payment exceeds --max-spend limit"`  | The request cost more than the configured cap. Raise `--max-spend` or omit it.              |
+| `"Insufficient SOL for fees"`          | Transfer a small amount of SOL (0.01 is enough for thousands of requests) to your wallet.   |
 | Model not found                        | Run `aimo router list-models` and use the exact model ID in the config.                     |
 | Authentication error from aimo proxy   | Run `aimo keygen` to create a keypair, or pass `--keypair <path>` to `aimo chat --serve`.   |
 | Config changes not taking effect       | Restart OpenClaw after editing `~/.openclaw/openclaw.json`.                                 |
